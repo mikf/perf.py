@@ -21,11 +21,6 @@ def inner(__iterator, __timer):
 """
 
 
-def indent(lines):
-    for idx, line in enumerate(lines):
-        lines[idx] = f"    {line}"
-
-
 def extract_code(path):
     name = None
     setup = []
@@ -54,7 +49,23 @@ def extract_code(path):
     return setup, functions
 
 
-def build_function(code, setup=()):
+def indent(lines):
+    for idx, line in enumerate(lines):
+        lines[idx] = f"    {line}"
+
+
+def indent_return(lines):
+    for idx, line in enumerate(lines):
+        sline = line.lstrip()
+        if sline.startswith("return "):
+            wslen = len(line) - len(sline) + 4
+            ws = " " * wslen
+            lines[idx] = f"{ws}({line[wslen+3:-1]})\n{ws}continue\n"
+        else:
+            lines[idx] = f"    {line}"
+
+
+def benchmark_generate(code, setup=(), return_stmt=False):
     for idx, line in enumerate(code):
         if line.strip() == "###":
             init = code[:idx]
@@ -63,12 +74,17 @@ def build_function(code, setup=()):
     else:
         init = ()
 
-    indent(code)
+    if return_stmt:
+        indent(code)
+    else:
+        indent_return(code)
 
     # generate and compile code
     join = "".join
-    source = template.format(
+    return template.format(
         setup=join(setup), init=join(init), code=join(code))
+
+def benchmark_compile(source):
     code_object = compile(source, "<perf-src>", "exec")
 
     # execute code to generate timing function
@@ -77,7 +93,7 @@ def build_function(code, setup=()):
     return namespace["inner"]
 
 
-def benchmark(function, iterations):
+def benchmark_run(function, iterations):
     iterator = itertools.repeat(None, iterations)
     timer = time.perf_counter
 
@@ -95,7 +111,7 @@ def guess_iterations(function, threshold=1.0):
     threshold /= 10.0
 
     while True:
-        timing = benchmark(function, iterations)
+        timing = benchmark_run(function, iterations)
         iterations *= 10
         if timing >= threshold:
             return iterations
@@ -135,9 +151,14 @@ def parse_arguments(args=None):
         help="Print program version and exit",
     )
     parser.add_argument(
+        "-S", "--show-source",
+        dest="show_source", action="store_true",
+        help="Display the generated benchmark code",
+    )
+    parser.add_argument(
         "-n", "--iterations",
         dest="iterations", metavar="N", type=int, default=0,
-        help="",
+        help="Number of iterations",
     )
     parser.add_argument(
         "-t", "--threshold",
@@ -170,12 +191,17 @@ def main():
         stdout_write(f"{name}{' ' * (length - len(name))}: ")
         stdout_flush()
 
-        function = build_function(source, setup=setup)
+        source = benchmark_generate(source, setup=setup)
+
+        if args.show_source:
+            stdout_write(f"\n{source}\n")
+
+        function = benchmark_compile(source)
 
         if not iterations:
             iterations = guess_iterations(function, args.threshold)
 
-        timing = benchmark(function, iterations)
+        timing = benchmark_run(function, iterations)
 
         if baseline is None:
             baseline = timing
