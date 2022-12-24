@@ -2,46 +2,51 @@
 # -*- coding: utf-8 -*-
 
 import gc
-import inspect
 import itertools
-import os
-import re
 import sys
 import time
 
 
 template = """
-def func(_it, _timer):
+def inner(__iterator, __timer):
 {setup}
 {init}
-    _t0 = _timer()
-    for _i in _it:
+    __t0 = __timer()
+    for _ in __iterator:
 {code}
-    _t1 = _timer()
-    return _t1 - _t0
+    __t1 = __timer()
+    return __t1 - __t0
 """
 
 
-def import_file(path):
-    directory, filename = os.path.split(path)
-    module_name = re.sub(r"\.(?:pyw?|exe)$", "", filename)
-
-    original_path = sys.path
-    try:
-        sys.path = (directory,)
-        return __import__(module_name)
-    finally:
-        sys.path = original_path
+def indent(lines):
+    for idx, line in enumerate(lines):
+        lines[idx] = f"    {line}"
 
 
-def extract_code(module):
-    module_name = module.__name__
+def extract_code(path):
+    name = None
+    setup = []
+    functions = {}
 
-    return {
-        name: inspect.getsourcelines(obj)[0][1:]
-        for name, obj in module.__dict__.items()
-        if callable(obj) and obj.__module__ == module_name
-    }
+    with open(path) as file:
+        for line in file:
+
+            if line.startswith("def "):
+                name = line[4:].partition("(")[0].strip()
+                functions[name] = lines = []
+
+            elif name:
+                if line.startswith(" "):
+                    lines.append(line)
+                else:
+                    name = None
+                    setup.append(line)
+
+            else:
+                setup.append(line)
+
+    return setup, functions
 
 
 def build_function(code, setup=()):
@@ -53,9 +58,7 @@ def build_function(code, setup=()):
     else:
         init = ()
 
-    # indent
-    for idx, line in enumerate(code):
-        code[idx] = f"    {line}"
+    indent(code)
 
     # generate and compile code
     join = "".join
@@ -66,7 +69,7 @@ def build_function(code, setup=()):
     # 'run' code to generate timing function
     namespace = {}
     exec(code_object, namespace)
-    return namespace["func"]
+    return namespace["inner"]
 
 
 def benchmark(function, iterations):
@@ -83,19 +86,19 @@ def benchmark(function, iterations):
             gc.enable()
 
 
-def measure(path, iterations=None):
-    module = import_file(path)
-    code = extract_code(module)
-    setup = code.pop("setup", ())
+def main():
+    path = sys.argv[1]
+    setup, functions = extract_code(path)
+    indent(setup)
 
-    baseline = None
-    l = len(max(code, key=len))
+    baseline = iterations = None
+    length = max(map(len, functions))
     stdout_write = sys.stdout.write
     stdout_flush = sys.stdout.flush
 
-    for name, source in code.items():
+    for name, source in functions.items():
 
-        stdout_write(f"{name}{' ' * (l - len(name))}: ")
+        stdout_write(f"{name}{' ' * (length - len(name))}: ")
         stdout_flush()
 
         function = build_function(source, setup=setup)
@@ -105,7 +108,7 @@ def measure(path, iterations=None):
             while True:
                 timing = benchmark(function, iterations)
                 iterations *= 10
-                if timing >= 0.05:
+                if timing >= 0.1:
                     break
 
         timing = benchmark(function, iterations)
@@ -117,4 +120,4 @@ def measure(path, iterations=None):
 
 
 if __name__ == "__main__":
-    measure(sys.argv[1])
+    sys.exit(main())
