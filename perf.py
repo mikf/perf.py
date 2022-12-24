@@ -6,6 +6,8 @@ import itertools
 import sys
 import time
 
+__version__ = "0.1.0"
+
 
 template = """
 def inner(__iterator, __timer):
@@ -29,22 +31,25 @@ def extract_code(path):
     setup = []
     functions = {}
 
+    append_setup = setup.append
+
     with open(path) as file:
         for line in file:
 
             if line.startswith("def "):
                 name = line[4:].partition("(")[0].strip()
                 functions[name] = lines = []
+                append_lines = lines.append
 
             elif name:
                 if line.startswith(" "):
-                    lines.append(line)
+                    append_lines(line)
                 else:
                     name = None
-                    setup.append(line)
+                    append_setup(line)
 
             else:
-                setup.append(line)
+                append_setup(line)
 
     return setup, functions
 
@@ -66,7 +71,7 @@ def build_function(code, setup=()):
         setup=join(setup), init=join(init), code=join(code))
     code_object = compile(source, "<perf-src>", "exec")
 
-    # 'run' code to generate timing function
+    # execute code to generate timing function
     namespace = {}
     exec(code_object, namespace)
     return namespace["inner"]
@@ -76,22 +81,86 @@ def benchmark(function, iterations):
     iterator = itertools.repeat(None, iterations)
     timer = time.perf_counter
 
-    gc_old = gc.isenabled()
+    gc_enabled = gc.isenabled()
     gc.disable()
-
     try:
         return function(iterator, timer)
     finally:
-        if gc_old:
+        if gc_enabled:
             gc.enable()
 
 
+def guess_iterations(function, threshold=1.0):
+    iterations = 10
+    threshold /= 10.0
+
+    while True:
+        timing = benchmark(function, iterations)
+        iterations *= 10
+        if timing >= threshold:
+            return iterations
+
+
+def parse_arguments(args=None):
+    import argparse
+
+    class Formatter(argparse.HelpFormatter):
+        """Custom HelpFormatter class to customize help output"""
+        def __init__(self, *args, **kwargs):
+            super().__init__(max_help_position=30, *args, **kwargs)
+
+        def _format_action_invocation(self, action):
+            opts = action.option_strings[:]
+            if opts:
+                if action.nargs != 0:
+                    args_string = self._format_args(action, "ARG")
+                    opts[-1] += " " + args_string
+                return ", ".join(opts)
+            else:
+                return self._metavar_formatter(action, action.dest)(1)[0]
+
+    parser = argparse.ArgumentParser(
+        usage="%(prog)s [OPTION]... PATH",
+        formatter_class=Formatter,
+        add_help=False,
+    )
+    parser.add_argument(
+        "-h", "--help",
+        action="help",
+        help="Print this help message and exit",
+    )
+    parser.add_argument(
+        "--version",
+        action="version", version=__version__,
+        help="Print program version and exit",
+    )
+    parser.add_argument(
+        "-n", "--iterations",
+        dest="iterations", metavar="N", type=int, default=0,
+        help="",
+    )
+    parser.add_argument(
+        "-t", "--threshold",
+        dest="threshold", metavar="SECONDS", type=float, default=1.0,
+        help="",
+    )
+    parser.add_argument(
+        "path",
+        metavar="PATH",
+        help=argparse.SUPPRESS,
+    )
+
+    return parser.parse_args(args)
+
+
 def main():
-    path = sys.argv[1]
-    setup, functions = extract_code(path)
+    args = parse_arguments()
+
+    setup, functions = extract_code(args.path)
     indent(setup)
 
-    baseline = iterations = None
+    baseline = None
+    iterations = args.iterations
     length = max(map(len, functions))
     stdout_write = sys.stdout.write
     stdout_flush = sys.stdout.flush
@@ -103,20 +172,15 @@ def main():
 
         function = build_function(source, setup=setup)
 
-        if iterations is None:
-            iterations = 1
-            while True:
-                timing = benchmark(function, iterations)
-                iterations *= 10
-                if timing >= 0.1:
-                    break
+        if not iterations:
+            iterations = guess_iterations(function, args.threshold)
 
         timing = benchmark(function, iterations)
 
         if baseline is None:
             baseline = timing
 
-        stdout_write(f"{timing:3.5f}s{timing / baseline: 3.2f}\n")
+        stdout_write(f"{timing:6.3f}s {timing / baseline:5.2f}\n")
 
 
 if __name__ == "__main__":
