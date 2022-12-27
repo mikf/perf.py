@@ -6,7 +6,7 @@ import itertools
 import sys
 import time
 
-__version__ = "0.1.0"
+__version__ = "0.1.2"
 
 
 template = """
@@ -54,7 +54,7 @@ def indent(lines):
         lines[idx] = f"    {line}"
 
 
-def indent_return(lines):
+def indent_strip_return(lines):
     for idx, line in enumerate(lines):
         sline = line.lstrip()
         if sline.startswith("return "):
@@ -73,16 +73,18 @@ def benchmark_generate(code, setup=(), return_stmt=False):
             break
     else:
         init = ()
+        code = code.copy()
 
     if return_stmt:
         indent(code)
+        code.append("    return")
     else:
-        indent_return(code)
+        indent_strip_return(code)
 
-    # generate and compile code
     join = "".join
     return template.format(
         setup=join(setup), init=join(init), code=join(code))
+
 
 def benchmark_compile(source):
     code_object = compile(source, "<perf-src>", "exec")
@@ -153,7 +155,12 @@ def parse_arguments(args=None):
     parser.add_argument(
         "-S", "--show-source",
         dest="show_source", action="store_true",
-        help="Display the generated benchmark code",
+        help="Display generated benchmark code",
+    )
+    parser.add_argument(
+        "-R", "--show-result",
+        dest="show_result", action="store_true",
+        help="Display function return values",
     )
     parser.add_argument(
         "-n", "--iterations",
@@ -163,7 +170,7 @@ def parse_arguments(args=None):
     parser.add_argument(
         "-t", "--threshold",
         dest="threshold", metavar="SECONDS", type=float, default=1.0,
-        help="",
+        help="Number of seconds to run a benchmark for",
     )
     parser.add_argument(
         "path",
@@ -191,12 +198,19 @@ def main():
         stdout_write(f"{name}{' ' * (length - len(name))}: ")
         stdout_flush()
 
-        source = benchmark_generate(source, setup=setup)
+        code = benchmark_generate(source, setup=setup)
 
         if args.show_source:
-            stdout_write(f"\n{source}\n")
+            stdout_write(f"\n{code}\n")
+            continue
 
-        function = benchmark_compile(source)
+        function = benchmark_compile(code)
+
+        if args.show_result:
+            result = benchmark_run(benchmark_compile(benchmark_generate(
+                source, setup=setup, return_stmt=True)), 1)
+            stdout_write(f"{result} ")
+            stdout_flush()
 
         if not iterations:
             iterations = guess_iterations(function, args.threshold)
