@@ -1,3 +1,39 @@
 perf.py
 
 A simple command-line tool to benchmark Python code.
+
+
+Usage:
+
+    $ perf.py --help
+    usage: perf.py [OPTION]... PATH
+
+    options:
+      -h, --help               Print this help message and exit
+      --version                Print program version and exit
+      -S, --show-source        Display generated benchmark code
+      -R, --show-result        Display function return values
+      -n, --iterations N       Number of iterations
+      -t, --threshold SECONDS  Number of seconds to run a benchmark for
+
+
+Example Usage:
+
+    $ cat benchmark.py
+
+    NAME = "filename.tar.gz"
+
+    def split():
+        return NAME.split(".")[-1]
+
+    def rsplit():
+        return NAME.rsplit(".", 1)[1]
+
+    def rpartition():
+        return NAME.rpartition(".")[2]
+
+
+    $ perf.py benchmark.py
+    split     :  1.436s  1.00
+    rsplit    :  1.231s  0.86
+    rpartition:  1.033s  0.72
