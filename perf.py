@@ -6,13 +6,16 @@ import itertools
 import sys
 import time
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 
 template = """
 def inner(__iterator, __timer):
+# setup
 {setup}
+# init
 {init}
+# loop
     __t0 = __timer()
     for _ in __iterator:
 {code}
@@ -37,7 +40,7 @@ def extract_code(path):
                 append_lines = lines.append
 
             elif name:
-                if line.startswith(" "):
+                if line.startswith((" ", "\n")):
                     append_lines(line)
                 else:
                     name = None
