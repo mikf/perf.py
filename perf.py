@@ -6,7 +6,7 @@ import itertools
 import sys
 import time
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 
 
 template = """
@@ -104,7 +104,7 @@ def benchmark_compile(source):
 
 def benchmark_run(function, iterations):
     iterator = itertools.repeat(None, iterations)
-    timer = time.perf_counter
+    timer = time.perf_counter_ns
 
     gc_enabled = gc.isenabled()
     gc.disable()
@@ -114,10 +114,9 @@ def benchmark_run(function, iterations):
         if gc_enabled:
             gc.enable()
 
-
-def guess_iterations(function, threshold=1.0):
+def guess_iterations(function, threshold=1_000_000_000):
     iterations = 10
-    threshold /= 10.0
+    threshold /= 10
 
     while True:
         timing = benchmark_run(function, iterations)
@@ -220,14 +219,16 @@ def main():
             stdout_flush()
 
         if not iterations:
-            iterations = guess_iterations(function, args.threshold)
+            iterations = guess_iterations(
+                function, args.threshold * 1_000_000_000)
 
         timing = benchmark_run(function, iterations)
 
         if baseline is None:
             baseline = timing
 
-        stdout_write(f"{timing:6.3f}s {timing / baseline:5.2f}\n")
+        stdout_write(f"{timing / iterations:,.2f} ns "
+                     f"{timing / baseline:5.2f}\n")
 
 
 if __name__ == "__main__":
