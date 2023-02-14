@@ -6,7 +6,7 @@ import itertools
 import sys
 import time
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 
 template = """
@@ -36,8 +36,12 @@ def extract_code(path):
 
             if line.startswith("def "):
                 name = line[4:].partition("(")[0].strip()
-                functions[name] = lines = []
-                append_lines = lines.append
+                if name.startswith("_"):
+                    name = None
+                    append_setup(line)
+                else:
+                    functions[name] = lines = []
+                    append_lines = lines.append
 
             elif name:
                 if line.startswith((" ", "\n")):
