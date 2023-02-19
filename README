@@ -12,12 +12,12 @@ Usage:
       -h, --help               Print this help message and exit
       --version                Print program version and exit
       -S, --show-source        Display generated benchmark code
-      -R, --show-result        Display function return values
+      -R, --show-results       Display function return values
       -n, --iterations N       Number of iterations
       -t, --threshold SECONDS  Number of seconds to run a benchmark for
 
 
-Example Usage:
+Example:
 
     $ cat benchmark.py
 
