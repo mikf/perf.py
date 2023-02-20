@@ -12,7 +12,8 @@ Usage:
       -h, --help               Print this help message and exit
       --version                Print program version and exit
       -S, --show-source        Display generated benchmark code
-      -R, --show-results       Display function return values
+      -B, --show-bytecode      Display bytecode
+      -R, --show-results       Display return values
       -n, --iterations N       Number of iterations
       -t, --threshold SECONDS  Number of seconds to run a benchmark for
 
@@ -34,6 +35,6 @@ Example:
 
 
     $ perf.py benchmark.py
-    split     :  1.436s  1.00
-    rsplit    :  1.231s  0.86
-    rpartition:  1.033s  0.72
+    split     : 146.13ns  1.00
+    rsplit    : 128.06ns  0.88
+    rpartition: 106.97ns  0.73

@@ -77,6 +77,11 @@ def indent_strip_return(lines):
             lines[idx] = f"    {line}"
 
 
+def unindent(lines):
+    for idx, line in enumerate(lines):
+        lines[idx] = line[4:]
+
+
 def benchmark_generate(code, setup=(), return_stmt=False):
     for idx, line in enumerate(code):
         if line.strip() == "###":
@@ -164,9 +169,14 @@ def parse_arguments(args=None):
         help="Display generated benchmark code",
     )
     parser.add_argument(
+        "-B", "--show-bytecode",
+        dest="show", action="append_const", const="bytecode",
+        help="Display bytecode",
+    )
+    parser.add_argument(
         "-R", "--show-results",
         dest="show", action="append_const", const="result",
-        help="Display function return values",
+        help="Display return values",
     )
     parser.add_argument(
         "-n", "--iterations",
@@ -223,8 +233,7 @@ def mode_benchmark(args, functions, setup):
         if baseline is None:
             baseline = ns_per_iter
 
-        stdout_write(f"{timing / TICKS_PER_SECOND:.2f}s  "
-                     f"{ns_per_iter:,.2f}ns "
+        stdout_write(f"{ns_per_iter:,.2f}ns "
                      f"{ns_per_iter / baseline:5.2f}\n")
 
 
@@ -234,9 +243,13 @@ def mode_show(args, functions, setup):
     show = args.show
     show_result = ("result" in show)
     show_source = ("source" in show)
+    show_bytecode = ("bytecode" in show)
 
     stdout_write = sys.stdout.write
     stdout_flush = sys.stdout.flush
+
+    if show_bytecode:
+        import dis
 
     for name, source in functions.items():
 
@@ -249,7 +262,12 @@ def mode_show(args, functions, setup):
 
         if show_source:
             code = benchmark_generate(source, setup=setup)
-            stdout_write(f">> Source:\n{code}\n")
+            stdout_write(f">> Source:{code}\n")
+
+        if show_bytecode:
+            unindent(source)
+            stdout_write(f">> Bytecode:\n")
+            dis.dis("\n".join(source))
 
         stdout_flush()
 
