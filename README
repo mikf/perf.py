@@ -17,6 +17,7 @@ Usage:
       -P, --show-python        Display Python version
       -n, --iterations N       Number of iterations
       -t, --threshold SECONDS  Number of seconds to run a benchmark for
+      -g, --gc                 Enable garbage collection during benchmark runs
 
 
 Example:

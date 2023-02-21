@@ -6,7 +6,7 @@ import itertools
 import sys
 import time
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 TIMER = time.perf_counter_ns
 TICKS_PER_SECOND = 1_000_000_000
@@ -24,6 +24,26 @@ def inner(__iterator, __timer):
     __t1 = __timer()
     return __t1 - __t0
 """
+
+
+class GC():
+
+    def __init__(self, enable):
+        self.enable = enable
+
+    def __enter__(self):
+        self._previous_state = gc.isenabled()
+        self._set_state(self.enable)
+
+    def __exit__(self, exc, value, tb):
+        self._set_state(self._previous_state)
+
+    @staticmethod
+    def _set_state(state):
+        if state:
+            gc.enable()
+        else:
+            gc.disable()
 
 
 def extract_code(path):
@@ -112,16 +132,10 @@ def benchmark_compile(source, name="inner"):
     return namespace[name]
 
 
-def benchmark_run(function, iterations, timer=TIMER):
+def benchmark_run(function, iterations, timer=TIMER, enable_gc=False):
     iterator = itertools.repeat(None, iterations)
-
-    gc_enabled = gc.isenabled()
-    gc.disable()
-    try:
+    with GC(enable_gc):
         return function(iterator, timer)
-    finally:
-        if gc_enabled:
-            gc.enable()
 
 
 def guess_iterations(function, threshold=TICKS_PER_SECOND):
@@ -194,6 +208,11 @@ def parse_arguments(args=None):
         help="Number of seconds to run a benchmark for",
     )
     parser.add_argument(
+        "-g", "--gc",
+        dest="gc", action="store_true",
+        help="Enable garbage collection during benchmark runs",
+    )
+    parser.add_argument(
         "path",
         metavar="PATH",
         help=argparse.SUPPRESS,
@@ -235,7 +254,7 @@ def mode_benchmark(args, functions, setup):
         code = benchmark_generate(source, setup=setup)
         function = benchmark_compile(code)
         iters = iterations or guess_iterations(function, args.threshold)
-        timing = benchmark_run(function, iters)
+        timing = benchmark_run(function, iters, enable_gc=args.gc)
 
         ns_per_iter = timing / iters
         if baseline is None:
