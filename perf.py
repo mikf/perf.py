@@ -6,7 +6,7 @@ import itertools
 import sys
 import time
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 
 TIMER = time.perf_counter_ns
 TICKS_PER_SECOND = 1_000_000_000
@@ -213,6 +213,11 @@ def parse_arguments(args=None):
         help="Enable garbage collection during benchmark runs",
     )
     parser.add_argument(
+        "-l", "--loop",
+        dest="loop", action="store_false",
+        help="Keep loop overhead in benchmark timings",
+    )
+    parser.add_argument(
         "path",
         metavar="PATH",
         help=argparse.SUPPRESS,
@@ -243,6 +248,13 @@ def mode_benchmark(args, functions, setup):
     else:
         args.threshold = TICKS_PER_SECOND
 
+    if args.loop:
+        iters = 1_000_000
+        ns_loop = benchmark_run(benchmark_compile(benchmark_generate(
+            ["    pass"])), iters, enable_gc=False) / iters
+    else:
+        ns_loop = 0.0
+
     if args.python:
         stdout_write(f"{sys.version}\n")
 
@@ -256,12 +268,12 @@ def mode_benchmark(args, functions, setup):
         iters = iterations or guess_iterations(function, args.threshold)
         timing = benchmark_run(function, iters, enable_gc=args.gc)
 
-        ns_per_iter = timing / iters
+        ns_iter = timing / iters - ns_loop
         if baseline is None:
-            baseline = ns_per_iter
+            baseline = ns_iter
 
-        stdout_write(f"{ns_per_iter:,.2f}ns "
-                     f"{ns_per_iter / baseline:5.2f}\n")
+        stdout_write(f"{ns_iter:,.2f}ns "
+                     f"{ns_iter / baseline:5.2f}\n")
 
 
 def mode_show(args, functions, setup):

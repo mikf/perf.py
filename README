@@ -18,6 +18,7 @@ Usage:
       -n, --iterations N       Number of iterations
       -t, --threshold SECONDS  Number of seconds to run a benchmark for
       -g, --gc                 Enable garbage collection during benchmark runs
+      -l, --loop               Keep loop overhead in benchmark timings
 
 
 Example:
