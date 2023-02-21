@@ -6,7 +6,7 @@ import itertools
 import sys
 import time
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 TIMER = time.perf_counter_ns
 TICKS_PER_SECOND = 1_000_000_000
@@ -179,6 +179,11 @@ def parse_arguments(args=None):
         help="Display return values",
     )
     parser.add_argument(
+        "-P", "--show-python",
+        dest="python", action="store_true",
+        help="Display Python version",
+    )
+    parser.add_argument(
         "-n", "--iterations",
         dest="iterations", metavar="N", type=int, default=0,
         help="Number of iterations",
@@ -219,6 +224,9 @@ def mode_benchmark(args, functions, setup):
     else:
         args.threshold = TICKS_PER_SECOND
 
+    if args.python:
+        stdout_write(f"{sys.version}\n")
+
     for name, source in functions.items():
 
         stdout_write(f"{name}{' ' * (length - len(name))}: ")
@@ -238,8 +246,6 @@ def mode_benchmark(args, functions, setup):
 
 
 def mode_show(args, functions, setup):
-    indent(setup)
-
     show = args.show
     show_result = ("result" in show)
     show_source = ("source" in show)
@@ -248,8 +254,12 @@ def mode_show(args, functions, setup):
     stdout_write = sys.stdout.write
     stdout_flush = sys.stdout.flush
 
+    if args.python:
+        stdout_write(f"{sys.version}\n")
     if show_bytecode:
         import dis
+
+    indent(setup)
 
     for name, source in functions.items():
 
@@ -266,7 +276,7 @@ def mode_show(args, functions, setup):
 
         if show_bytecode:
             unindent(source)
-            stdout_write(f">> Bytecode:\n")
+            stdout_write(">> Bytecode:\n")
             dis.dis("\n".join(source))
 
         stdout_flush()

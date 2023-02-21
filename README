@@ -14,6 +14,7 @@ Usage:
       -S, --show-source        Display generated benchmark code
       -B, --show-bytecode      Display bytecode
       -R, --show-results       Display return values
+      -P, --show-python        Display Python version
       -n, --iterations N       Number of iterations
       -t, --threshold SECONDS  Number of seconds to run a benchmark for
 
