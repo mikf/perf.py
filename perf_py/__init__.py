@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright 2022-2023 Mike Fährmann
@@ -12,7 +11,7 @@ import itertools
 import sys
 import time
 
-__version__ = "0.2.3"
+__version__ = "0.3.0"
 
 TIMER = time.perf_counter_ns
 TICKS_PER_SECOND = 1_000_000_000
@@ -317,7 +316,3 @@ def mode_show(args, functions, setup):
             dis.dis("\n".join(source))
 
         stdout_flush()
-
-
-if __name__ == "__main__":
-    sys.exit(main())
