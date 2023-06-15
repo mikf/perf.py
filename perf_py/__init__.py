@@ -11,7 +11,7 @@ import itertools
 import sys
 import time
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 TIMER = time.perf_counter_ns
 TICKS_PER_SECOND = 1_000_000_000
@@ -95,7 +95,7 @@ def indent_strip_return(lines):
             wslen = len(line) - len(sline) + 4
             ws = " " * wslen
 
-            lines[idx] = f"{ws}{line[wslen+3:-1]}\n"
+            lines[idx] = f"{ws}{line[wslen+2:-1].lstrip()}\n"
             if idx + 1 < len(lines):
                 lines[idx] += f"{ws}continue\n"
         else:
