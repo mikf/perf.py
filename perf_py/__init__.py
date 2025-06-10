@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2022-2023 Mike Fährmann
+# Copyright 2022-2025 Mike Fährmann
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as
@@ -43,20 +43,14 @@ class GC():
     def __exit__(self, exc, value, tb):
         self._set_state(self._previous_state)
 
-    @staticmethod
-    def _set_state(state):
-        if state:
-            gc.enable()
-        else:
-            gc.disable()
+    def _set_state(self, state):
+        gc.enable() if state else gc.disable()
 
 
 def extract_code(path):
     name = None
     setup = []
     functions = {}
-
-    append_setup = setup.append
 
     with open(path) as file:
         for line in file:
@@ -65,20 +59,19 @@ def extract_code(path):
                 name = line[4:].partition("(")[0].strip()
                 if name.startswith("_"):
                     name = None
-                    append_setup(line)
+                    setup.append(line)
                 else:
                     functions[name] = lines = []
-                    append_lines = lines.append
 
             elif name:
                 if line.startswith((" ", "\n")):
-                    append_lines(line)
+                    lines.append(line)
                 else:
                     name = None
-                    append_setup(line)
+                    setup.append(line)
 
             else:
-                append_setup(line)
+                setup.append(line)
 
     return setup, functions
 
