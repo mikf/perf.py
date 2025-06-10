@@ -11,7 +11,7 @@ import itertools
 import sys
 import time
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 TIMER = time.perf_counter_ns
 TICKS_PER_SECOND = 1_000_000_000
@@ -239,7 +239,7 @@ def main():
 def mode_benchmark(args, functions, setup):
     indent(setup)
 
-    baseline = None
+    baseline = error = None
     iterations = args.iterations
     length = max(map(len, functions))
     stdout_write = sys.stdout.write
@@ -261,12 +261,24 @@ def mode_benchmark(args, functions, setup):
         stdout_write(f"{sys.version}\n")
 
     for name, source in functions.items():
+        code = benchmark_generate(source, setup=setup)
+        func = benchmark_compile(code)
 
+        try:
+            benchmark_run(func, 1)
+        except Exception as exc:
+            stdout_write(f"{name}:  {exc.__class__.__name__}: {exc}\n")
+            error = True
+
+        functions[name] = func
+
+    if error:
+        return 1
+
+    for name, function in functions.items():
         stdout_write(f"{name}{' ' * (length - len(name))}: ")
         stdout_flush()
 
-        code = benchmark_generate(source, setup=setup)
-        function = benchmark_compile(code)
         iters = iterations or guess_iterations(function, args.threshold)
         timing = benchmark_run(function, iters, enable_gc=args.gc)
 
@@ -300,8 +312,11 @@ def mode_show(args, functions, setup):
 
         if show_result:
             code = benchmark_generate(source, setup=setup, return_stmt=True)
-            result = benchmark_run(benchmark_compile(code), 1)
-            stdout_write(f">> Result: {result}\n")
+            try:
+                result = benchmark_run(benchmark_compile(code), 1)
+                stdout_write(f">> Result: {repr(result)}\n")
+            except Exception as exc:
+                stdout_write(f">> Result: {exc.__class__.__name__}: {exc}\n")
 
         if show_source:
             code = benchmark_generate(source, setup=setup)
