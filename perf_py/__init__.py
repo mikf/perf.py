@@ -11,7 +11,7 @@ import itertools
 import sys
 import time
 
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 
 TIMER = time.perf_counter_ns
 TICKS_PER_SECOND = 1_000_000_000
@@ -63,8 +63,9 @@ def extract_code(path):
                     name = None
                     setup.append(line)
                 else:
-                    fidx += 1
-                    name = f"{fidx} {name}"
+                    if name != "base":
+                        fidx += 1
+                        name = f"{fidx} {name}"
                     functions[name] = lines = []
 
             elif name:
@@ -250,12 +251,17 @@ def mode_benchmark(args, functions, setup):
     else:
         args.threshold = TICKS_PER_SECOND
 
-    if args.loop:
+    if source := functions.pop("base", None):
+        code = benchmark_generate(source, setup=setup)
+        func = benchmark_compile(code)
+        iters = iterations or guess_iterations(func, args.threshold)
+        ns_base = benchmark_run(func, iters, enable_gc=args.gc) / iters
+    elif args.loop:
         iters = 1_000_000
-        ns_loop = benchmark_run(benchmark_compile(benchmark_generate(
+        ns_base = benchmark_run(benchmark_compile(benchmark_generate(
             ["    pass"])), iters, enable_gc=False) / iters
     else:
-        ns_loop = 0.0
+        ns_base = 0.0
 
     if args.python:
         stdout_write(f"{sys.version}\n")
@@ -282,7 +288,7 @@ def mode_benchmark(args, functions, setup):
         iters = iterations or guess_iterations(function, args.threshold)
         timing = benchmark_run(function, iters, enable_gc=args.gc)
 
-        ns_iter = timing / iters - ns_loop
+        ns_iter = timing / iters - ns_base
         if baseline is None:
             baseline = ns_iter
 
@@ -305,6 +311,7 @@ def mode_show(args, functions, setup):
         import dis
 
     indent(setup)
+    functions.pop("base", None)
 
     for name, source in functions.items():
 
