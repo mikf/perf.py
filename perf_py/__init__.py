@@ -11,7 +11,7 @@ import itertools
 import sys
 import time
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 
 TIMER = time.perf_counter_ns
 TICKS_PER_SECOND = 1_000_000_000
@@ -176,22 +176,22 @@ def parse_arguments(args=None):
         help="Print program version and exit",
     )
     parser.add_argument(
-        "-S", "--show-source",
+        "-s", "-S", "--show-source",
         dest="show", action="append_const", const="source",
         help="Display generated benchmark code",
     )
     parser.add_argument(
-        "-B", "--show-bytecode",
+        "-b", "-B", "--show-bytecode",
         dest="show", action="append_const", const="bytecode",
         help="Display bytecode",
     )
     parser.add_argument(
-        "-R", "--show-results",
+        "-r", "-R", "--show-results",
         dest="show", action="append_const", const="result",
         help="Display return values",
     )
     parser.add_argument(
-        "-P", "--show-python",
+        "-p", "-P", "--show-python",
         dest="python", action="store_true",
         help="Display Python version",
     )
