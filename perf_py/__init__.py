@@ -49,6 +49,7 @@ class GC():
 
 def extract_code(path):
     name = None
+    fidx = 0
     setup = []
     functions = {}
 
@@ -56,11 +57,14 @@ def extract_code(path):
         for line in file:
 
             if line.startswith("def "):
-                name = line[4:].partition("(")[0].strip()
+                name = (line[4:].partition(":")[0].rstrip("()")
+                                .partition("(")[0].strip())
                 if name.startswith("_"):
                     name = None
                     setup.append(line)
                 else:
+                    fidx += 1
+                    name = f"{fidx} {name}"
                     functions[name] = lines = []
 
             elif name:
